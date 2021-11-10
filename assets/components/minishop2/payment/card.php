@@ -20,13 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode($json, true);
 
     $id = $data['AccountNo'];
+    
+    if (is_numeric($id))
+    {
+       $order = $modx->getObject('msOrder', array('id'=>$id));
+    } 
+    else
+    {
+       $order = false;
+    }
 
-    if ($modx->getOption('EXPRESS_PAY_IS_USE_SIGNATURE_FROM_NOTIFICATION_CARD')) {
+
+    if ($modx->getOption('EXPRESS_PAY_IS_USE_SIGNATURE_FROM_NOTIFICATION_CARD') && $order) {
 
         $secretWord = $modx->getOption('EXPRESS_PAY_SECRET_WORD_FROM_NOTIFICATION_CARD');
 
         if ($signature == computeSignature($json, $secretWord)) {
-            if ($data['CmdType'] == '3' && $data['Status'] == '3') {
+            if ($data['CmdType'] == '3' && $data['Status'] == '3' || $data['Status'] == '6') {
                 $miniShop2->changeOrderStatus($id, 2); // Изменение статуса заказа на оплачен
                 header("HTTP/1.0 200 OK");
                 print $status = 'OK | payment received'; //Все успешно
@@ -40,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("HTTP/1.0 400 Bad Request");
             print $status = 'FAILED | wrong notify signature  ' .print_r($json,1). computeSignature($json, $secretWord). $secretWord; //Ошибка в параметрах
         }
-    } elseif ($order = $modx->getObject('msOrder', (int)$id)) {
-        if ($data['CmdType'] == '3' && $data['Status'] == '3') 
+    } elseif ($order) {
+        if ($data['CmdType'] == '3' && $data['Status'] == '3' || $data['Status'] == '6') 
         {
             $miniShop2->changeOrderStatus($id, 2); // Изменение статуса заказа на оплачен
             header("HTTP/1.0 200 OK");
